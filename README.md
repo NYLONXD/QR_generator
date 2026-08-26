@@ -26,7 +26,7 @@ The QR code never contains the Google Form URL. QR tokens are generated with `cr
 ## Run locally
 
 ```bash
-docker compose up -d
+c
 cd backend && npm install && npm run start:dev
 cd frontend && npm install && npm run dev
 ```
