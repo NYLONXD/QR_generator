@@ -8,6 +8,9 @@ export class RedisService implements OnModuleDestroy {
 
   constructor(config: ConfigService) {
     this.client = new Redis(config.getOrThrow<string>('REDIS_URL'));
+    this.client.on('error', (err) => {
+      console.error('Redis error:', err);
+    });
   }
 
   async onModuleDestroy() {
