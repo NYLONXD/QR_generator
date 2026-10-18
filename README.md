@@ -27,6 +27,12 @@ Browser-only temporary access gateway for an existing Google Form. Teachers past
 - Sign-up is self-service: `POST /auth/register` creates an active account and signs the teacher straight in. There is no email verification or admin approval yet, so the server checks the domain only, not that the person owns that mailbox or is faculty.
 - Every attendance endpoint is scoped to the signed-in teacher, so each dashboard and session history shows only that teacher's sessions. Another teacher's session id gets a 404.
 
+## Google Form links
+
+Teachers can paste any link to their form, including the editor link from the address bar (`…/forms/d/<id>/edit`), which only the form's editors can open. Students are always sent to the form's public page instead: `backend/src/attendance/google-form-url.ts` rewrites any `docs.google.com/forms/…` link to `…/viewform`, keeping pre-filled `entry.*` answers, and Google redirects that to the published form. `forms.gle` short links are used as they are. The teacher's own "Open Google Form" buttons keep the link as pasted, so an editor link still opens the responses.
+
+This only fixes the link. The form must still be published and accepting responses in Google Forms.
+
 ## Security boundaries
 
 The QR code never contains the Google Form URL. QR tokens are generated with `crypto.randomBytes(32)`, live for 20 seconds in Redis, and are checked server-side. Browser-only systems cannot prove which physical phone scanned a QR; a currently valid gateway URL can still be forwarded during its 20-second window.

@@ -5,7 +5,7 @@ import { useShell } from '../components/AppLayout';
 import { Alert, Field, PageHeader, Spinner } from '../components/ui';
 import { useToast } from '../context/ToastContext';
 import { useLoader } from '../hooks/useLoader';
-import { isGoogleFormsUrl, QR_TTL_SECONDS, SESSION_TYPES } from '../lib/constants';
+import { isGoogleFormsUrl, QR_TTL_SECONDS, SESSION_TYPES, studentFormUrl } from '../lib/constants';
 import { api, AttendanceSession, errorMessage, StartSessionInput } from '../services/api';
 
 type Errors = Partial<Record<keyof StartSessionInput, string>>;
@@ -17,7 +17,7 @@ function validate(form: StartSessionInput): Errors {
   if (!/^[A-Z]{2,5}\d{2,4}[A-Z]?$/.test(form.courseCode.trim())) errors.courseCode = 'Use the course code format, e.g. UCS503.';
   if (form.courseTitle.trim().length < 3) errors.courseTitle = 'Enter the course title.';
   if (!form.group.trim()) errors.group = 'Enter the class group or section.';
-  if (!isGoogleFormsUrl(form.googleFormUrl)) errors.googleFormUrl = 'Paste a Google Forms link starting with https://docs.google.com/forms/ or https://forms.gle/';
+  if (!isGoogleFormsUrl(form.googleFormUrl)) errors.googleFormUrl = 'Paste the link to your form, e.g. https://docs.google.com/forms/d/…/edit or https://forms.gle/…';
   return errors;
 }
 
@@ -41,8 +41,11 @@ export function NewSession() {
   const [errors, setErrors] = useState<Errors>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const studentLink = studentFormUrl(form.googleFormUrl);
+  // Teachers often paste the editor link from their address bar; students are sent to the form's /viewform page instead.
+  const isEditLink = studentLink !== null && !studentLink.startsWith('https://forms.gle/') && !form.googleFormUrl.includes('/viewform');
 
-  const set = <K extends keyof StartSessionInput>(key: K, value: StartSessionInput[K]) => {
+  const set =<K extends keyof StartSessionInput>(key: K, value: StartSessionInput[K]) => {
     setForm(f => ({ ...f, [key]: value }));
     setErrors(e => ({ ...e, [key]: undefined }));
   };
@@ -150,7 +153,9 @@ export function NewSession() {
             </fieldset>
 
             <Field label="Google Form link" htmlFor="googleFormUrl" error={errors.googleFormUrl}
-              hint="Students never see this link. It's stored on the server and opened only after a valid scan.">
+              hint={isEditLink
+                ? <><strong>Edit link detected.</strong> Students can't open edit links, so they'll get your form's student link automatically.</>
+                : "Students never see this link. It's stored on the server and opened only after a valid scan."}>
               <div className="input-wrap has-icon">
                 <Link2 size={18} />
                 <input id="googleFormUrl" className="input input-mono" type="url" inputMode="url" placeholder="https://docs.google.com/forms/d/e/…/viewform"

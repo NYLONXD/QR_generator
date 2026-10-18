@@ -10,6 +10,7 @@ import { Response } from "express";
 import { trimmed } from "../common/trimmed";
 import { PostgresService } from "../postgres/postgres.service";
 import { RedisService } from "../redis/redis.service";
+import { studentFormUrl } from "./google-form-url";
 
 const QR_TTL_SECONDS = 20;
 const GRANT_TTL_SECONDS = 60;
@@ -77,7 +78,9 @@ export class AttendanceService {
       throw new BadRequestException(
         "Session type must be Lecture, Tutorial or Lab.",
       );
-    if (!this.isGoogleFormsUrl(googleFormUrl))
+    // The teacher's link is stored as pasted (an editor link still opens their responses);
+    // students get studentFormUrl() of it in access().
+    if (!studentFormUrl(googleFormUrl))
       throw new BadRequestException("A valid Google Forms URL is required");
     const result = await this.db.query<{ id: string }>(
       "INSERT INTO attendance_sessions (teacher_id, course_code, course_title, class_group, session_type, google_form_url, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
@@ -227,21 +230,11 @@ export class AttendanceService {
       [grant.sessionId],
     );
     if (!result.rows[0]) throw new UnauthorizedException();
-    res.type("html").send(this.formEmbedHtml(result.rows[0].google_form_url));
-  }
-
-  private isGoogleFormsUrl(value: string) {
-    try {
-      const url = new URL(value);
-      return (
-        url.protocol === "https:" &&
-        ((url.hostname === "docs.google.com" &&
-          url.pathname.startsWith("/forms/")) ||
-          url.hostname === "forms.gle")
-      );
-    } catch {
-      return false;
-    }
+    // Sessions started before links were checked this strictly fall back to the stored link.
+    const formUrl = result.rows[0].google_form_url;
+    res
+      .type("html")
+      .send(this.formEmbedHtml(studentFormUrl(formUrl) ?? formUrl));
   }
 
   private toEmbeddedFormUrl(formUrl: string) {
