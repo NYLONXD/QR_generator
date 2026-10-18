@@ -79,7 +79,7 @@ export function Dashboard() {
       )}
 
       {error && !sessions ? (
-        <Alert tone="warning">Session history is not available yet. You can still start a new attendance session.</Alert>
+        <Alert tone="warning">Session history could not be loaded. You can still start a new attendance session.</Alert>
       ) : !stats ? (
         <KpiSkeleton />
       ) : (

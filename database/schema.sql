@@ -19,3 +19,22 @@ CREATE TABLE IF NOT EXISTS attendance_sessions (
 
 CREATE INDEX IF NOT EXISTS idx_attendance_sessions_teacher_status
     ON attendance_sessions (teacher_id, status);
+
+-- Faculty self sign-up and per-teacher dashboards.
+-- Everything below is additive and idempotent: re-running this whole file upgrades an existing database.
+ALTER TABLE teachers
+    ADD COLUMN IF NOT EXISTS department VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS designation VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'teacher' CHECK (role IN ('teacher', 'admin'));
+
+-- The '' defaults only backfill sessions created before these columns existed; POST /attendance/start always sets them.
+ALTER TABLE attendance_sessions
+    ADD COLUMN IF NOT EXISTS course_code VARCHAR(20) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS course_title VARCHAR(200) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS class_group VARCHAR(50) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS session_type VARCHAR(20) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS check_ins INTEGER NOT NULL DEFAULT 0;
+
+-- Dashboard and session history: one teacher's sessions, newest first.
+CREATE INDEX IF NOT EXISTS idx_attendance_sessions_teacher_created
+    ON attendance_sessions (teacher_id, created_at DESC);

@@ -171,9 +171,10 @@ export const mockApi: Api = {
     const db = load();
     const email = input.email.trim().toLowerCase();
     if (db.teachers.some(t => t.email === email)) throw new ApiError('An account with this email already exists.', 409);
-    db.teachers.push({ ...input, email, id: `t-${pseudoToken(email + Date.now()).slice(0, 10)}`, role: 'teacher', status: 'pending', createdAt: new Date().toISOString() });
+    const teacher: MockTeacher = { ...input, email, id: `t-${pseudoToken(email + Date.now()).slice(0, 10)}`, role: 'teacher', status: 'active', createdAt: new Date().toISOString() };
+    db.teachers.push(teacher);
     save(db);
-    return { status: 'pending' };
+    return { accessToken: issueToken(teacher), teacher: toPublic(teacher) };
   },
 
   async me() {

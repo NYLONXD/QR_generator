@@ -254,12 +254,6 @@ code { padding: 1px 6px; border-radius: 6px; background: rgb(34 31 32 / .06); fo
 .demo-account strong { font-size: 14px; }
 .demo-account span { font-size: 13px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; }
 
-.success-panel { text-align: center; padding: 8px 0; }
-.success-icon {
-  display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto 20px;
-  border-radius: 50%; background: var(--success-soft); color: var(--success);
-}
-
 /* ---------- App shell ---------- */
 .app { min-height: 100vh; display: grid; grid-template-columns: var(--sidebar-w) 1fr; }
 .sidebar {

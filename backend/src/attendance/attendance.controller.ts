@@ -1,7 +1,10 @@
-import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, ParseUUIDPipe, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { JwtAuthGuard, TeacherRequest } from '../auth/jwt-auth.guard';
-import { AttendanceService } from './attendance.service';
+import { AttendanceService, StartSessionInput } from './attendance.service';
+
+/** A malformed id gets the same 404 as another teacher's session, instead of a Postgres uuid cast error (500). */
+const parseSessionId = new ParseUUIDPipe({ exceptionFactory: () => new NotFoundException('Attendance session not found') });
 
 @Controller()
 export class AttendanceController {
@@ -9,19 +12,31 @@ export class AttendanceController {
 
   @UseGuards(JwtAuthGuard)
   @Post('attendance/start')
-  start(@Req() req: TeacherRequest, @Body() body: { googleFormUrl?: string }) {
-    return this.attendance.start(req.teacher.id, body.googleFormUrl ?? '');
+  start(@Req() req: TeacherRequest, @Body() body: StartSessionInput) {
+    return this.attendance.start(req.teacher.id, body);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('attendance/stop')
-  stop(@Req() req: TeacherRequest, @Body() body: { sessionId?: string }) {
-    return this.attendance.stop(req.teacher.id, body.sessionId ?? '');
+  stop(@Req() req: TeacherRequest, @Body('sessionId', parseSessionId) sessionId: string) {
+    return this.attendance.stop(req.teacher.id, sessionId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('attendance/sessions')
+  listSessions(@Req() req: TeacherRequest) {
+    return this.attendance.listSessions(req.teacher.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('attendance/sessions/:sessionId')
+  getSession(@Req() req: TeacherRequest, @Param('sessionId', parseSessionId) sessionId: string) {
+    return this.attendance.getSession(req.teacher.id, sessionId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('attendance/:sessionId/qr')
-  getQr(@Req() req: TeacherRequest, @Param('sessionId') sessionId: string) {
+  getQr(@Req() req: TeacherRequest, @Param('sessionId', parseSessionId) sessionId: string) {
     return this.attendance.getQr(req.teacher.id, sessionId);
   }
 

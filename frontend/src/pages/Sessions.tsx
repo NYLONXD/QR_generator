@@ -68,7 +68,7 @@ export function Sessions() {
       />
 
       {error && !sessions ? (
-        <Alert tone="warning">Session history could not be loaded. This needs the <code>GET /attendance/sessions</code> endpoint on the backend.</Alert>
+        <Alert tone="warning">Session history could not be loaded. Refresh the page to try again.</Alert>
       ) : !sessions ? (
         <div className="card"><LoadingBlock label="Loading sessions…" /></div>
       ) : sessions.length === 0 ? (

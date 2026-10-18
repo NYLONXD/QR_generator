@@ -1,6 +1,6 @@
 import { mockApi } from './mockApi';
 import { getToken } from './token';
-import { Api, ApiError, LoginResponse, QrResponse, Teacher } from './types';
+import { Api, ApiError, QrResponse, Teacher } from './types';
 
 export * from './types';
 export { clearToken, getToken, setToken } from './token';
@@ -9,7 +9,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000
 /** Demo mode: `npm run dev:mock` (Vite --mode mock), or VITE_USE_MOCK=true in any env file. */
 export const USE_MOCK = import.meta.env.MODE === 'mock' || import.meta.env.VITE_USE_MOCK === 'true';
 
-/** Reads the teacher out of the JWT payload so the UI can render before /auth/me exists. */
+/** Reads the teacher out of the JWT payload so the UI can render before /auth/me responds. */
 export function teacherFromToken(jwt: string): Teacher | null {
   try {
     const payload = JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
@@ -40,21 +40,17 @@ const patch = (body: unknown): RequestInit => ({ method: 'PATCH', body: JSON.str
 
 // Endpoints marked "planned" are not in the NestJS backend yet; see README "Frontend API contract".
 const httpApi: Api = {
-  login: async (email, password) => {
-    const result = await request<LoginResponse>('/auth/login', post({ email, password }));
-    // The current backend doesn't send a role yet; treat everyone as faculty until it does.
-    return { ...result, teacher: { ...result.teacher, role: result.teacher.role ?? 'teacher' } };
-  },
-  register: input => request('/auth/register', post(input)), // planned
-  me: () => request('/auth/me'), // planned
-  updateProfile: input => request('/auth/me', patch(input)), // planned
-  changePassword: (currentPassword, newPassword) => request('/auth/change-password', post({ currentPassword, newPassword })), // planned
+  login: (email, password) => request('/auth/login', post({ email, password })),
+  register: input => request('/auth/register', post(input)),
+  me: () => request('/auth/me'),
+  updateProfile: input => request('/auth/me', patch(input)),
+  changePassword: (currentPassword, newPassword) => request('/auth/change-password', post({ currentPassword, newPassword })),
 
   start: input => request('/attendance/start', post(input)),
   stop: sessionId => request('/attendance/stop', post({ sessionId })),
   qr: sessionId => request<QrResponse>(`/attendance/${sessionId}/qr`),
-  session: sessionId => request(`/attendance/sessions/${sessionId}`), // planned
-  sessions: () => request('/attendance/sessions'), // planned
+  session: sessionId => request(`/attendance/sessions/${sessionId}`),
+  sessions: () => request('/attendance/sessions'),
 
   faculty: () => request('/admin/faculty'), // planned
   addFaculty: input => request('/admin/faculty', post(input)), // planned

@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Fingerprint, ShieldCheck, Smartphone, Timer } from 'lucide-react';
+import { QR_TTL_SECONDS } from '../lib/constants';
 import { ThaparLogo } from './Brand';
 
 /** Decorative QR-style motif for the brand panel (not a scannable code). */
@@ -35,7 +36,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           <ul className="auth-features">
             <li>
               <span className="feature-icon"><Timer size={19} /></span>
-              <div><strong>Rotates every 15 seconds</strong><span>Each QR code expires quickly, so a screenshot shared on WhatsApp stops working within seconds.</span></div>
+              <div><strong>Rotates every {QR_TTL_SECONDS} seconds</strong><span>Each QR code expires quickly, so a screenshot shared on WhatsApp stops working within seconds.</span></div>
             </li>
             <li>
               <span className="feature-icon"><ShieldCheck size={19} /></span>

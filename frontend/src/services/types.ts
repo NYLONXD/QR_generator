@@ -64,7 +64,8 @@ export interface NewFacultyInput {
 
 export interface Api {
   login(email: string, password: string): Promise<LoginResponse>;
-  register(input: RegisterInput): Promise<{ status: 'pending' }>;
+  /** Self sign-up: the account is active straight away and comes back signed in. */
+  register(input: RegisterInput): Promise<LoginResponse>;
   me(): Promise<Teacher>;
   updateProfile(input: ProfileInput): Promise<Teacher>;
   changePassword(currentPassword: string, newPassword: string): Promise<void>;

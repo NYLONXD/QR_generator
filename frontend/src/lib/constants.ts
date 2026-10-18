@@ -3,7 +3,7 @@ import { SessionType } from '../services/types';
 export const FACULTY_EMAIL_DOMAIN = 'thapar.edu';
 
 /** Must match QR_TTL_SECONDS in backend/src/attendance/attendance.service.ts. */
-export const QR_TTL_SECONDS = 15;
+export const QR_TTL_SECONDS = 20;
 
 export const DEPARTMENTS = [
   'Computer Science & Engineering',

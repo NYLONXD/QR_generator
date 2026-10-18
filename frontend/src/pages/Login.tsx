@@ -54,7 +54,7 @@ export function Login() {
         </button>
       </form>
 
-      <p className="auth-switch">New to the portal? <Link to="/register">Request faculty access</Link></p>
+      <p className="auth-switch">New to the portal? <Link to="/register">Create an account</Link></p>
 
       {USE_MOCK && (
         <div className="demo-accounts">

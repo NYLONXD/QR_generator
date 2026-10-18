@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Camera, CircleCheck, Minimize2, ScanLine } from 'lucide-react';
+import { QR_TTL_SECONDS } from '../lib/constants';
 import { AttendanceSession, QrResponse } from '../services/api';
 import { ThaparLogo } from './Brand';
 import { QrDisplay } from './QrPanel';
@@ -68,7 +69,7 @@ export function PresenterMode({ session, qr, progress, secondsLeft, offline, onC
       </div>
 
       <div className="presenter-bottom">
-        <span>The code changes every 15 seconds, so screenshots stop working.</span>
+        <span>The code changes every {QR_TTL_SECONDS} seconds, so screenshots stop working.</span>
         <button type="button" className="btn btn-ghost" onClick={onClose}><Minimize2 size={18} />Exit presenter view (Esc)</button>
       </div>
     </div>

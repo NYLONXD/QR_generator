@@ -5,7 +5,7 @@ import { useShell } from '../components/AppLayout';
 import { Alert, Field, PageHeader, Spinner } from '../components/ui';
 import { useToast } from '../context/ToastContext';
 import { useLoader } from '../hooks/useLoader';
-import { isGoogleFormsUrl, SESSION_TYPES } from '../lib/constants';
+import { isGoogleFormsUrl, QR_TTL_SECONDS, SESSION_TYPES } from '../lib/constants';
 import { api, AttendanceSession, errorMessage, StartSessionInput } from '../services/api';
 
 type Errors = Partial<Record<keyof StartSessionInput, string>>;
@@ -172,7 +172,7 @@ export function NewSession() {
             <div className="card-body">
               <ol className="steps">
                 <li><div><strong>Start the session</strong><span>Your Google Form link is saved on the server, and never put in the QR code.</span></div></li>
-                <li><div><strong>Show the rotating QR code</strong><span>A new code appears every 15 seconds. Use presenter view on the classroom projector.</span></div></li>
+                <li><div><strong>Show the rotating QR code</strong><span>A new code appears every {QR_TTL_SECONDS} seconds. Use presenter view on the classroom projector.</span></div></li>
                 <li><div><strong>Students scan and check in</strong><span>Each scan is checked on the server before the form opens on the student's phone.</span></div></li>
                 <li><div><strong>End the session</strong><span>Once you end it, the code stops working at once. Responses stay in your Google Form.</span></div></li>
               </ol>
@@ -180,7 +180,7 @@ export function NewSession() {
           </section>
           <div className="note">
             <Lock size={18} />
-            <span>A screenshot of the code stops working within 15 seconds. A link forwarded inside that window can still be opened, so keep the code on screen only while students are in the room.</span>
+            <span>A screenshot of the code stops working within {QR_TTL_SECONDS} seconds. A link forwarded inside that window can still be opened, so keep the code on screen only while students are in the room.</span>
           </div>
         </aside>
       </div>

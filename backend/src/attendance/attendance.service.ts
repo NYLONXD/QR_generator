@@ -7,13 +7,20 @@ import {
 import { ConfigService } from "@nestjs/config";
 import { createHash, randomBytes } from "crypto";
 import { Response } from "express";
+import { trimmed } from "../common/trimmed";
 import { PostgresService } from "../postgres/postgres.service";
 import { RedisService } from "../redis/redis.service";
 
-const QR_TTL_SECONDS = 15;
+const QR_TTL_SECONDS = 20;
 const GRANT_TTL_SECONDS = 60;
 const BROWSER_SESSION_TTL_SECONDS = 300;
 const BROWSER_COOKIE = "attendance_browser_session";
+const SESSION_TYPES = ["Lecture", "Tutorial", "Lab"];
+/** Same rule the frontend applies in NewSession, e.g. UCS503. */
+const COURSE_CODE = /^[A-Z]{2,5}\d{2,4}[A-Z]?$/;
+/** Shaped like AttendanceSession in frontend/src/services/types.ts. */
+const SESSION_COLUMNS =
+  'id, teacher_id AS "teacherId", course_code AS "courseCode", course_title AS "courseTitle", class_group AS "group", session_type AS "sessionType", google_form_url AS "googleFormUrl", status, check_ins AS "checkIns", created_at AS "createdAt", stopped_at AS "stoppedAt"';
 
 interface SessionStatusRow {
   id: string;
@@ -21,11 +28,17 @@ interface SessionStatusRow {
 }
 interface SessionUrlRow {
   google_form_url: string;
-  status: string;
 }
 interface Grant {
   sessionId: string;
   browserSessionId: string;
+}
+export interface StartSessionInput {
+  courseCode?: string;
+  courseTitle?: string;
+  group?: string;
+  sessionType?: string;
+  googleFormUrl?: string;
 }
 
 @Injectable()
@@ -44,15 +57,60 @@ export class AttendanceService {
     this.secureCookie = config.get<string>("COOKIE_SECURE", "true") !== "false";
   }
 
-  async start(teacherId: string, googleFormUrl: string) {
+  async start(teacherId: string, input: StartSessionInput) {
+    const courseCode = trimmed(input.courseCode).toUpperCase();
+    const courseTitle = trimmed(input.courseTitle);
+    const group = trimmed(input.group).toUpperCase();
+    const sessionType = trimmed(input.sessionType);
+    const googleFormUrl = trimmed(input.googleFormUrl);
+    if (!COURSE_CODE.test(courseCode))
+      throw new BadRequestException("Use the course code format, e.g. UCS503.");
+    if (!courseTitle || courseTitle.length > 200)
+      throw new BadRequestException(
+        "Enter the course title (up to 200 characters).",
+      );
+    if (!group || group.length > 50)
+      throw new BadRequestException(
+        "Enter the class group (up to 50 characters).",
+      );
+    if (!SESSION_TYPES.includes(sessionType))
+      throw new BadRequestException(
+        "Session type must be Lecture, Tutorial or Lab.",
+      );
     if (!this.isGoogleFormsUrl(googleFormUrl))
       throw new BadRequestException("A valid Google Forms URL is required");
     const result = await this.db.query<{ id: string }>(
-      "INSERT INTO attendance_sessions (teacher_id, google_form_url, status) VALUES ($1, $2, $3) RETURNING id",
-      [teacherId, googleFormUrl, "active"],
+      "INSERT INTO attendance_sessions (teacher_id, course_code, course_title, class_group, session_type, google_form_url, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+      [
+        teacherId,
+        courseCode,
+        courseTitle,
+        group,
+        sessionType,
+        googleFormUrl,
+        "active",
+      ],
     );
     await this.redis.client.set(this.sessionActiveKey(result.rows[0].id), "1");
     return { sessionId: result.rows[0].id };
+  }
+
+  async listSessions(teacherId: string) {
+    const result = await this.db.query(
+      `SELECT ${SESSION_COLUMNS} FROM attendance_sessions WHERE teacher_id = $1 ORDER BY created_at DESC`,
+      [teacherId],
+    );
+    return result.rows;
+  }
+
+  async getSession(teacherId: string, sessionId: string) {
+    const result = await this.db.query(
+      `SELECT ${SESSION_COLUMNS} FROM attendance_sessions WHERE id = $1 AND teacher_id = $2`,
+      [sessionId, teacherId],
+    );
+    if (!result.rows[0])
+      throw new NotFoundException("Attendance session not found");
+    return result.rows[0];
   }
 
   async stop(teacherId: string, sessionId: string) {
@@ -158,19 +216,17 @@ export class AttendanceService {
     browserSessionId: string | undefined,
     res: Response,
   ) {
-    const grantKey = this.grantKey(grantToken);
-    const rawGrant = await this.redis.client.get(grantKey);
+    // GETDEL so two concurrent requests can't both redeem (and count) one grant.
+    const rawGrant = await this.redis.client.getdel(this.grantKey(grantToken));
     if (!rawGrant) throw new UnauthorizedException();
-    await this.redis.client.del(grantKey);
     const grant = JSON.parse(rawGrant) as Grant;
     if (!browserSessionId || browserSessionId !== grant.browserSessionId)
       throw new UnauthorizedException();
     const result = await this.db.query<SessionUrlRow>(
-      "SELECT google_form_url, status FROM attendance_sessions WHERE id = $1",
+      "UPDATE attendance_sessions SET check_ins = check_ins + 1 WHERE id = $1 AND status = 'active' RETURNING google_form_url",
       [grant.sessionId],
     );
-    if (!result.rows[0] || result.rows[0].status !== "active")
-      throw new UnauthorizedException();
+    if (!result.rows[0]) throw new UnauthorizedException();
     res.type("html").send(this.formEmbedHtml(result.rows[0].google_form_url));
   }
 

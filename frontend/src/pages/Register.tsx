@@ -1,10 +1,11 @@
 import { FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Mail, MailCheck, UserRound } from 'lucide-react';
+import { Mail, UserRound } from 'lucide-react';
 import { AuthLayout } from '../components/AuthLayout';
 import { Alert, Field, PasswordInput, Spinner } from '../components/ui';
+import { useAuth } from '../context/AuthContext';
 import { DEPARTMENTS, DESIGNATIONS, FACULTY_EMAIL_DOMAIN, isFacultyEmail } from '../lib/constants';
-import { api, errorMessage, RegisterInput } from '../services/api';
+import { errorMessage, RegisterInput } from '../services/api';
 
 type Errors = Partial<Record<keyof RegisterInput | 'confirm', string>>;
 
@@ -20,12 +21,12 @@ function validate(form: RegisterInput, confirm: string): Errors {
 }
 
 export function Register() {
+  const { register } = useAuth();
   const [form, setForm] = useState<RegisterInput>({ name: '', email: '', department: '', designation: '', password: '' });
   const [confirm, setConfirm] = useState('');
   const [errors, setErrors] = useState<Errors>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
   const update = (key: keyof RegisterInput) => (event: { target: { value: string } }) => {
     setForm(f => ({ ...f, [key]: event.target.value }));
@@ -40,28 +41,13 @@ export function Register() {
     if (Object.keys(found).length) return;
     setLoading(true);
     try {
-      await api.register({ ...form, name: form.name.trim(), email: form.email.trim().toLowerCase() });
-      setSubmitted(true);
+      await register({ ...form, name: form.name.trim(), email: form.email.trim().toLowerCase() });
+      // GuestOnly redirects to the dashboard once the teacher is set.
     } catch (err) {
-      setError(errorMessage(err, 'Could not submit your request. Please try again.'));
-    } finally {
+      setError(errorMessage(err, 'Could not create your account. Please try again.'));
       setLoading(false);
     }
   }
-
-  if (submitted) return (
-    <AuthLayout>
-      <div className="success-panel">
-        <span className="success-icon"><MailCheck size={30} /></span>
-        <h2>Request submitted</h2>
-        <p className="subtitle">
-          Thanks, {form.name.trim()}. A portal administrator will review your request for <strong>{form.email.trim().toLowerCase()}</strong>.
-          You can sign in once it's approved.
-        </p>
-        <Link to="/login" className="btn btn-dark btn-lg btn-block" style={{ marginTop: 28 }}><ArrowLeft size={18} />Back to sign in</Link>
-      </div>
-    </AuthLayout>
-  );
 
   const invalid = (key: keyof Errors) => ({
     'aria-invalid': errors[key] ? true : undefined,
@@ -70,8 +56,8 @@ export function Register() {
 
   return (
     <AuthLayout>
-      <h2>Request faculty access</h2>
-      <p className="subtitle">Create your account. An administrator approves new accounts before first sign-in.</p>
+      <h2>Create your faculty account</h2>
+      <p className="subtitle">Sign up with your official @{FACULTY_EMAIL_DOMAIN} email and go straight to your dashboard.</p>
 
       <form className="form" onSubmit={submit} noValidate>
         {error && <Alert>{error}</Alert>}
@@ -112,7 +98,7 @@ export function Register() {
           </Field>
         </div>
         <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={loading}>
-          {loading ? <><Spinner /> Submitting…</> : 'Submit request'}
+          {loading ? <><Spinner /> Creating account…</> : 'Create account'}
         </button>
       </form>
 
